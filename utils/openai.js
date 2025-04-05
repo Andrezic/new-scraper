@@ -1,47 +1,48 @@
-const fetch = require('node-fetch');
+// utils/openai.js
 
-const API_KEY = '🔑 AICI PUI CHEIA TA OPENAI'; // înlocuiești cu cheia ta
+const axios = require('axios');
 
-async function generateLeadFromOpenAI(profilFirma) {
-  try {
+const OPENAI_API_KEY = 'cheia-ta-api-openai-aici';
+
+async function generateLead() {
     const prompt = `
-Analizează profilul firmei și generează o cerere de client interesat.
+    Generează un lead de test pentru o firmă din domeniul Automatizări AI.
+    Returnează doar JSON cu următoarele câmpuri:
+    - numeClient
+    - emailClient
+    - cerereClient
+    - firmaId (folosește testFirmaId)
+    `;
 
-Profil Firmă:
-Nume: ${profilFirma.numeFirma}
-Servicii: ${profilFirma.servicii}
-Avantaje: ${profilFirma.avantaje}
+    try {
+        const response = await axios.post(
+            'https://api.openai.com/v1/chat/completions',
+            {
+                model: "gpt-3.5-turbo",
+                messages: [{ role: "user", content: prompt }]
+            },
+            {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${OPENAI_API_KEY}`
+                }
+            }
+        );
 
-Generează o cerere relevantă:
-`;
+        const text = response.data.choices[0].message.content.trim();
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${API_KEY}`
-      },
-      body: JSON.stringify({
-        model: "gpt-3.5-turbo",
-        messages: [{ role: "user", content: prompt }]
-      })
-    });
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+            throw new Error("Nu s-a găsit JSON valid în răspunsul AI.");
+        }
 
-    const data = await response.json();
+        const lead = JSON.parse(jsonMatch[0]);
+        return lead;
 
-    if (!response.ok) {
-      console.error("❌ Eroare OpenAI API:", data);
-      throw new Error("OpenAI API error");
+    } catch (error) {
+        console.error("❌ Eroare OpenAI:", error.response?.data || error.message);
+        throw error;
     }
-
-    const message = data.choices[0].message.content.trim();
-    console.log("🧠 OpenAI a generat:", message);
-
-    return message;
-  } catch (error) {
-    console.error("❌ Eroare la generarea cererii din OpenAI:", error);
-    return "Cerere generată automat.";
-  }
 }
 
-module.exports = { generateLeadFromOpenAI };
+module.exports = { generateLead };

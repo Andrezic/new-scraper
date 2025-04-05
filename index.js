@@ -1,25 +1,37 @@
-const fetch = require("node-fetch");
+// index.js
 
-async function trimiteLead() {
-  try {
-    const raspuns = await fetch("https://www.skywardflow.com/_functions/receiveLeadFromScraper", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        numeClient: "Ion Popescu",
-        emailClient: "ionpopescu@example.com",
-        cerereClient: "Aș dori servicii AI pentru gestionarea recenziilor online.",
-        dataGenerarii: new Date(),
-        status: "Nou",
-        firmaId: "test-user-id"
-      })
-    });
+const express = require('express');
+const axios = require('axios');
+const cors = require('cors');
+const { generateLead } = require('./utils/openai');
 
-    const rezultat = await raspuns.json();
-    console.log("📬 Răspuns de la Wix:", rezultat);
-  } catch (err) {
-    console.error("❌ Eroare la trimiterea leadului:", err.message);
-  }
-}
+const app = express();
+app.use(cors());
+app.use(express.json());
 
-trimiteLead();
+const PORT = process.env.PORT || 10000;
+
+app.post('/genereaza', async (req, res) => {
+    console.log("🚀 Request primit pe endpoint /genereaza");
+
+    try {
+        // Generează lead cu AI
+        const lead = await generateLead();
+        console.log("✅ Lead generat:", lead);
+
+        // Trimite lead-ul către Wix API
+        const response = await axios.post('https://www.skywardflow.com/_functions/receiveLeadFromScraper', lead, {
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        console.log("✅ Lead trimis către Wix:", response.data);
+        res.status(200).json({ success: true, data: response.data });
+    } catch (error) {
+        console.error("❌ Eroare la trimiterea leadului:", error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.listen(PORT, () => {
+    console.log(`✅ Skyward Scraper live on port ${PORT}`);
+});
