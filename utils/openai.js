@@ -1,48 +1,39 @@
-// utils/openai.js
+const fetch = require('node-fetch');
 
-const axios = require('axios');
+const OPENAI_API_KEY = 'cheia-ta-openai'; // 🔒 pune cheia ta OpenAI
 
-const OPENAI_API_KEY = 'cheia-ta-api-openai-aici';
+async function genereazaLeadCuOpenAI(profil) {
+  try {
+    const prompt = `Creează un lead B2B pentru o companie care oferă ${profil.servicii}. Avantaje: ${profil.avantaje}. Prețuri: ${profil.preturi}. Telefon: ${profil.telefonFirma}.`;
 
-async function generateLead() {
-    const prompt = `
-    Generează un lead de test pentru o firmă din domeniul Automatizări AI.
-    Returnează doar JSON cu următoarele câmpuri:
-    - numeClient
-    - emailClient
-    - cerereClient
-    - firmaId (folosește testFirmaId)
-    `;
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${OPENAI_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: 'gpt-4',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.7,
+        max_tokens: 200
+      })
+    });
 
-    try {
-        const response = await axios.post(
-            'https://api.openai.com/v1/chat/completions',
-            {
-                model: "gpt-3.5-turbo",
-                messages: [{ role: "user", content: prompt }]
-            },
-            {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${OPENAI_API_KEY}`
-                }
-            }
-        );
+    const data = await response.json();
 
-        const text = response.data.choices[0].message.content.trim();
+    const textGenerat = data.choices[0]?.message?.content?.trim() || 'Lead generic AI';
+    console.log('✅ Răspuns OpenAI:', textGenerat);
 
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) {
-            throw new Error("Nu s-a găsit JSON valid în răspunsul AI.");
-        }
-
-        const lead = JSON.parse(jsonMatch[0]);
-        return lead;
-
-    } catch (error) {
-        console.error("❌ Eroare OpenAI:", error.response?.data || error.message);
-        throw error;
-    }
+    return {
+      numeClient: 'Client AI Generat',
+      emailClient: 'thisistestmail2025@gmail.com', // momentan email de test
+      cerereClient: textGenerat
+    };
+  } catch (error) {
+    console.error('❌ Eroare OpenAI:', error);
+    throw new Error('Eroare la generarea leadului cu AI');
+  }
 }
 
-module.exports = { generateLead };
+module.exports = { genereazaLeadCuOpenAI };
