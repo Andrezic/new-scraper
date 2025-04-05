@@ -1,17 +1,14 @@
 {
   "name": "skyward-scraper",
   "version": "1.0.0",
-  "description": "Skyward Flow Scraper cu AI Integration",
+  "description": "Skyward Flow AI Scraper cu integrare OpenAI",
   "main": "index.js",
-  "type": "commonjs",
   "scripts": {
     "start": "node index.js"
   },
-  "keywords": [],
-  "author": "Skyward Flow",
-  "license": "ISC",
   "dependencies": {
-  "cors": "^2.8.5",
-  "express": "^4.18.2",
-  "node-fetch": "^2.6.7"
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "node-fetch": "^2.6.7"
+  }
 }
