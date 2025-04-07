@@ -1,63 +1,44 @@
-const express = require("express");
-const bodyParser = require("body-parser");
-const axios = require("axios");
-const { generatePrompt } = require("./utils/openai");
+const express = require('express');
+const axios = require('axios');
+const { generateLeadUsingOpenAI } = require('./utils/openai');
 
 const app = express();
-const PORT = process.env.PORT || 10000;
+app.use(express.json());
 
-app.use(bodyParser.json());
+// Endpoint-ul principal pentru generare lead
+app.post('/genereaza', async (req, res) => {
+  const firmaData = req.body;
 
-// Endpoint principal pentru generare lead
-app.post("/genereaza", async (req, res) => {
-  const firma = req.body;
+  console.log('📥 Date primite de la dashboard:', firmaData);
 
-  // ✅ Verificăm datele primite
-  if (!firma || !firma.firmaId || !firma.firmaNume || !firma.firmaServicii || !firma.firmaEmail || !firma.firmaTelefon) {
-    console.error("❌ Date incomplete primite:", firma);
-    return res.status(400).json({ success: false, error: "Date incomplete primite pentru generare lead." });
+  if (!firmaData || !firmaData.firmaId || !firmaData.firmaNume || !firmaData.firmaServicii) {
+    console.error('❌ Date lipsă pentru generarea leadului.');
+    return res.status(400).json({ success: false, error: 'Incomplete firma data' });
   }
 
   try {
-    console.log("🧩 Generăm promptul AI pe baza profilului firmei...");
-    const prompt = generatePrompt(firma);
+    // Trimitem datele din profilul firmei către OpenAI
+    const leadGenerat = await generateLeadUsingOpenAI(firmaData);
+    console.log('✅ Lead generat de AI:', leadGenerat);
 
-    console.log("🧠 Prompt generat:", prompt);
+    // Trimitem lead-ul generat către API-ul Wix
+    const response = await axios.post('https://www.skywardflow.com/_functions/receiveLeadFromScraper', leadGenerat);
 
-    // ✅ Trimitem promptul către OpenAI pentru generarea leadului
-    const aiResponse = await axios.post("https://api.openai.com/v1/completions", {
-      model: "text-davinci-003",
-      prompt: prompt,
-      temperature: 0.7,
-      max_tokens: 200
-    }, {
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
-      }
-    });
-
-    const aiText = aiResponse.data.choices[0].text.trim();
-
-    console.log("📥 Răspuns AI:", aiText);
-
-    // ✅ Trimitem lead-ul către Wix API
-    await axios.post("https://www.skywardflow.com/_functions/receiveLeadFromScraper", {
-      numeClient: "Lead automatizat AI",
-      emailClient: "thisistestmail2025@gmail.com",
-      cerereClient: aiText,
-      firmaId: firma.firmaId
-    });
-
-    console.log("✅ Lead trimis către Wix cu succes!");
-
-    res.status(200).json({ success: true, message: "Lead generat și trimis cu succes!" });
+    if (response.data && response.data.success) {
+      console.log('✅ Lead trimis cu succes către Wix CMS:', response.data);
+      res.json({ success: true, data: response.data });
+    } else {
+      console.error('❌ Eroare la trimiterea leadului către Wix:', response.data);
+      res.status(500).json({ success: false, error: 'Wix API error' });
+    }
   } catch (error) {
-    console.error("❌ Eroare în procesul de generare lead:", error);
+    console.error('❌ Eroare generală la generarea sau trimiterea leadului:', error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
+// Pornim serverul
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log(`✅ Skyward Scraper live on port ${PORT}`);
 });
