@@ -1,19 +1,17 @@
+
 const axios = require('axios');
 
 module.exports = async function generateLead(firmaInfo) {
-  const messages = [
-    {
-      role: "system",
-      content: "Ești un generator de leaduri pentru o firmă din România. Primești detalii despre firmă și trebuie să generezi un lead autentic."
-    },
-    {
-      role: "user",
-      content: `
-Firma: ${firmaInfo.firmaNume || 'Nespecificat'}
-Servicii: ${firmaInfo.firmaServicii || 'Nespecificat'}
-Avantaje: ${firmaInfo.firmaAvantaje || 'Nespecificat'}
-Prețuri: ${firmaInfo.firmaPreturi || 'Nespecificat'}
-Telefon: ${firmaInfo.firmaTelefon || 'Nespecificat'}
+  try {
+    const prompt = `
+Firma: ${firmaInfo.firmaNume}
+Email: ${firmaInfo.firmaEmail}
+Telefon: ${firmaInfo.firmaTelefon}
+Website: ${firmaInfo.firmaWebsite}
+Servicii: ${firmaInfo.firmaServicii}
+Avantaje: ${firmaInfo.firmaAvantaje}
+Prețuri: ${firmaInfo.firmaPreturi}
+Tip clienți: ${firmaInfo.firmaTipClienti}
 
 Generează un lead relevant pentru această firmă. Leadul trebuie să fie autentic, ca și cum ar fi un client real interesat.
 
@@ -21,17 +19,14 @@ Format răspuns dorit:
 - Nume client
 - Email client
 - Cerere client (ce solicită)
-      `
-    }
-  ];
+`;
 
-  try {
-    const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-      model: 'gpt-3.5-turbo',
-      messages,
+    const response = await axios.post('https://api.openai.com/v1/completions', {
+      model: 'text-davinci-003',
+      prompt: prompt,
       max_tokens: 150,
       temperature: 0.7,
-      n: 1,
+      n: 1
     }, {
       headers: {
         'Content-Type': 'application/json',
@@ -39,19 +34,20 @@ Format răspuns dorit:
       }
     });
 
-    const text = response.data.choices[0].message.content.trim();
-    console.log("🧠 Răspuns AI complet:", text);
+    const aiText = response.data.choices[0].text.trim();
+    console.log("🧠 Răspuns AI complet:", aiText);
 
-    const [numeClientLine, emailClientLine, cerereClientLine] = text.split('\n').map(line => line.trim());
+    const [nume, email, cerere] = aiText.split('\n').map(line => line.replace(/^.*?:\s*/, '').trim());
 
     return {
-      numeClient: numeClientLine?.replace(/^- /, '') || 'Client necunoscut',
-      emailClient: emailClientLine?.replace(/^- /, '') || 'email@exemplu.com',
-      cerereClient: cerereClientLine?.replace(/^- /, '') || 'Solicitare nespecificată',
-      firmaId: firmaInfo.firmaId,
+      numeClient: nume,
+      emailClient: email,
+      cerereClient: cerere,
+      firmaId: firmaInfo.firmaNume
     };
+
   } catch (error) {
-    console.error("❌ Eroare OpenAI:", error.response?.data || error.message);
+    console.error("❌ Eroare OpenAI:", error);
     throw error;
   }
 };
