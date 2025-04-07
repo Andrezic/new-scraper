@@ -3,6 +3,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const cron = require('node-cron');
 const generateLead = require('./utils/openai');
+const axios = require('axios');
 
 const app = express();
 app.use(cors());
@@ -40,18 +41,22 @@ cron.schedule('*/5 * * * *', async () => {
   console.log("⏰ Cronjob activat: generare lead automat");
 
   try {
-    // Poți pune aici un profil demo sau unul real, momentan demo pentru test
-    const firmaInfo = {
-      numeFirma: "Test Firmă Demo",
-      servicii: "Servicii demo pentru testare",
-      avantaje: "Rapid și eficient",
-      preturi: "100-200 lei",
-      contact: "demo@skywardflow.com"
-    };
+    // 1. Preluăm datele reale din Wix
+    const profilResponse = await axios.get('https://www.skywardflow.com/_functions/getProfilFirma');
 
+    if (!profilResponse.data || !profilResponse.data.items || profilResponse.data.items.length === 0) {
+      throw new Error('❌ Niciun profil de firmă găsit.');
+    }
+
+    const firmaInfo = profilResponse.data.items[0]; // luam primul profil gasit
+
+    console.log("📦 Profil firmă preluat:", firmaInfo);
+
+    // 2. Generăm lead
     const lead = await generateLead(firmaInfo);
     console.log("✅ Lead generat de AI:", lead);
 
+    // 3. Trimitem lead-ul către Wix
     const response = await fetch('https://www.skywardflow.com/_functions/receiveLeadFromScraper', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -62,8 +67,9 @@ cron.schedule('*/5 * * * *', async () => {
 
     const data = await response.json();
     console.log("✅ Lead trimis cu succes către Wix:", data);
+
   } catch (error) {
-    console.error("❌ Eroare în cronjob:", error);
+    console.error("❌ Eroare în cronjob:", error.response?.data || error.message);
   }
 });
 
