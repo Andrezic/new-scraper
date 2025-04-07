@@ -1,48 +1,47 @@
 const axios = require('axios');
 
-const OPENAI_API_KEY = 'SECRET_CHEIA_TA_OPENAI'; // pune cheia ta secretă aici
+async function generateLead(firma) {
+  const prompt = `
+Firma: ${firma.firmaNume}
+Servicii: ${firma.firmaServicii}
+Avantaje: ${firma.firmaAvantaje || 'Nespecificat'}
+Prețuri: ${firma.firmaPreturi || 'Nespecificat'}
+Tip clienți: ${firma.firmaTipClienti || 'Nespecificat'}
 
-async function generateLeadUsingOpenAI(firmaData) {
-  try {
-    const prompt = `
-    Firma: ${firmaData.firmaNume}
-    Servicii: ${firmaData.firmaServicii}
-    Avantaje: ${firmaData.avantaje || 'Nespecificat'}
-    Prețuri: ${firmaData.preturi || 'Nespecificat'}
-    Tip Clienți: ${firmaData.tipClienti || 'Nespecificat'}
-    Website: ${firmaData.siteWeb || 'Nespecificat'}
+Generează un lead relevant pentru această firmă. Leadul trebuie să fie autentic, ca și cum ar fi un client real interesat.
 
-    Generează o cerere autentică de la un client interesat de serviciile acestei firme. Scrie mesajul clientului:
-    `;
+Format răspuns dorit:
+- Nume client
+- Email client
+- Cerere client (ce solicită)
 
-    const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-      model: 'gpt-3.5-turbo',
-      messages: [
-        { role: 'system', content: 'Generează leaduri realiste pentru firme, pe baza datelor oferite.' },
-        { role: 'user', content: prompt }
-      ],
-      temperature: 0.7,
-      max_tokens: 150
-    }, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`
-      }
-    });
+`;
 
-    const mesajGenerat = response.data.choices[0].message.content.trim();
+  const apiKey = process.env.OPENAI_API_KEY;
 
-    return {
-      numeClient: "Client AI",
-      emailClient: "lead-generat-ai@skywardflow.com",
-      cerereClient: mesajGenerat,
-      firmaId: firmaData.firmaId
-    };
+  const response = await axios.post('https://api.openai.com/v1/completions', {
+    model: 'text-davinci-003',
+    prompt,
+    max_tokens: 150,
+    temperature: 0.7,
+    n: 1,
+    stop: null,
+  }, {
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    }
+  });
 
-  } catch (error) {
-    console.error('❌ Eroare la generarea leadului cu OpenAI:', error.message);
-    throw error;
-  }
+  const text = response.data.choices[0].text.trim();
+  const [numeClient, emailClient, cerereClient] = text.split('\n').map(l => l.replace('-', '').trim());
+
+  return {
+    numeClient,
+    emailClient,
+    cerereClient,
+    firmaId: firma.firmaId
+  };
 }
 
-module.exports = { generateLeadUsingOpenAI };
+module.exports = { generateLead };
