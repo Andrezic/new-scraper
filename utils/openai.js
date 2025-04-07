@@ -1,8 +1,8 @@
-import axios from 'axios';
+const axios = require('axios');
 
 const OPENAI_API_KEY = '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';
 
-export async function generateLead(firma) {
+async function generateLead(firma) {
   const prompt = `
 Firma: ${firma.firmaNume || "Nespecificat"}
 Servicii: ${firma.firmaServicii || "Nespecificat"}
@@ -40,3 +40,5 @@ Format răspuns dorit:
     throw error;
   }
 }
+
+module.exports = { generateLead };
