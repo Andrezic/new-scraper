@@ -1,43 +1,55 @@
 const express = require('express');
 const axios = require('axios');
-const { generateLeadUsingOpenAI } = require('./utils/openai');
+const cors = require('cors');
 
 const app = express();
+app.use(cors());
 app.use(express.json());
 
-// Endpoint-ul principal pentru generare lead
 app.post('/genereaza', async (req, res) => {
-  const firmaData = req.body;
+  const { firmaId } = req.body;
 
-  console.log('📥 Date primite de la dashboard:', firmaData);
-
-  if (!firmaData || !firmaData.firmaId || !firmaData.firmaNume || !firmaData.firmaServicii) {
-    console.error('❌ Date lipsă pentru generarea leadului.');
-    return res.status(400).json({ success: false, error: 'Incomplete firma data' });
+  if (!firmaId) {
+    console.error("❌ Nu am primit firmaId în cerere:", req.body);
+    return res.status(400).json({ success: false, error: "FirmaId lipsă" });
   }
 
+  console.log("✅ Am primit cererea de generare lead pentru firma:", firmaId);
+
   try {
-    // Trimitem datele din profilul firmei către OpenAI
-    const leadGenerat = await generateLeadUsingOpenAI(firmaData);
-    console.log('✅ Lead generat de AI:', leadGenerat);
+    // 📦 Cerere la API-ul Wix pentru profil firmă
+    const profilFirmaResponse = await axios.post('https://www.skywardflow.com/_functions/getProfilFirma', { firmaId });
 
-    // Trimitem lead-ul generat către API-ul Wix
-    const response = await axios.post('https://www.skywardflow.com/_functions/receiveLeadFromScraper', leadGenerat);
+    if (!profilFirmaResponse.data || !profilFirmaResponse.data.success) {
+      console.error("❌ Nu am putut obține datele firmei din Wix:", profilFirmaResponse.data);
+      return res.status(500).json({ success: false, error: "Nu am putut obține datele firmei din Wix" });
+    }
 
-    if (response.data && response.data.success) {
-      console.log('✅ Lead trimis cu succes către Wix CMS:', response.data);
-      res.json({ success: true, data: response.data });
+    const firma = profilFirmaResponse.data.firma;
+
+    // 🧠 Generăm lead cu AI + datele reale ale firmei
+    const leadData = {
+      numeClient: "Client interesat AI",
+      emailClient: "thisistestmail2025@gmail.com",
+      cerereClient: `Bună! Sunt interesat de serviciile: ${firma.servicii}. Avantaje: ${firma.avantaje}. Preturi: ${firma.preturi}`,
+      firmaId: firmaId
+    };
+
+    const wixResponse = await axios.post('https://www.skywardflow.com/_functions/receiveLeadFromScraper', leadData);
+
+    if (wixResponse.data.success) {
+      console.log("✅ Lead trimis cu succes la Wix:", wixResponse.data);
+      res.json({ success: true });
     } else {
-      console.error('❌ Eroare la trimiterea leadului către Wix:', response.data);
-      res.status(500).json({ success: false, error: 'Wix API error' });
+      console.error("❌ Eroare la trimiterea leadului către Wix:", wixResponse.data);
+      res.status(500).json({ success: false, error: "Eroare la trimiterea leadului către Wix" });
     }
   } catch (error) {
-    console.error('❌ Eroare generală la generarea sau trimiterea leadului:', error.message);
+    console.error("❌ Eroare generală la procesarea cererii:", error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Pornim serverul
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log(`✅ Skyward Scraper live on port ${PORT}`);
