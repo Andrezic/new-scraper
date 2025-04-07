@@ -17,20 +17,20 @@ cron.schedule('*/5 * * * *', async () => {
 
   try {
     // Preluăm pagina publică
-    const response = await axios.get('https://www.skywardflow.com/profil-firma');
+    const response = await axios.get('https://www.skywardflow.com/date-firma');
     const html = response.data;
     const $ = cheerio.load(html);
 
-    // Extragem datele din pagina publică cu ID-urile reale
+    // Extragem datele din pagina publică folosind text() pentru elemente de tip text
     const firmaInfo = {
-      firmaNume: $('#inputNumeFirma').val() || $('#inputNumeFirma').text() || '',
-      firmaEmail: $('#inputEmailFirma').val() || $('#inputEmailFirma').text() || '',
-      firmaTelefon: $('#inputTelefonFirma').val() || $('#inputTelefonFirma').text() || '',
-      firmaWebsite: $('#inputWebsiteFirma').val() || $('#inputWebsiteFirma').text() || '',
-      firmaServicii: $('#inputServicii').val() || $('#inputServicii').text() || '',
-      firmaAvantaje: $('#inputAvantaje').val() || $('#inputAvantaje').text() || '',
-      firmaPreturi: $('#inputPreturi').val() || $('#inputPreturi').text() || '',
-      firmaTipClienti: $('#inputTipClienti').val() || $('#inputTipClienti').text() || '',
+      firmaNume: $('#inputNumeFirma').text().trim(),
+      firmaEmail: $('#inputEmailFirma').text().trim(),
+      firmaTelefon: $('#inputTelefonFirma').text().trim(),
+      firmaWebsite: $('#inputWebsiteFirma').text().trim(),
+      firmaServicii: $('#inputServicii').text().trim(),
+      firmaAvantaje: $('#inputAvantaje').text().trim(),
+      firmaPreturi: $('#inputPreturi').text().trim(),
+      firmaTipClienti: $('#inputTipClienti').text().trim(),
     };
 
     console.log("📦 Profil firmă extras din HTML:", firmaInfo);
