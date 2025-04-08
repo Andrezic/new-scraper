@@ -1,101 +1,45 @@
 const express = require('express');
-const puppeteer = require('puppeteer');
+const bodyParser = require('body-parser');
 const axios = require('axios');
 
 const app = express();
-const port = process.env.PORT || 3000;
+app.use(bodyParser.json());
 
-app.use(express.json());
-
-app.post('/genereaza', async (req, res) => {
-  console.log('⏰ Start generare lead manual din cronjob extern');
+// Endpoint public pentru scraper
+app.post('/primestelead', async (req, res) => {
+  const lead = req.body;
+  console.log('📥 Lead primit de la scraper:', lead);
 
   try {
-    console.log('🚀 Lansăm browserul Puppeteer...');
-    const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
-    const page = await browser.newPage();
-    await page.goto('https://www.skywardflow.com/date-firma', { waitUntil: 'domcontentloaded' });
-
-    const data = await page.evaluate(() => {
-      return {
-        firmaNume: document.querySelector('#inputNumeFirma')?.value || '',
-        firmaEmail: document.querySelector('#inputEmailFirma')?.value || '',
-        firmaTelefon: document.querySelector('#inputTelefonFirma')?.value || '',
-        firmaWebsite: document.querySelector('#inputWebsiteFirma')?.value || '',
-        firmaServicii: document.querySelector('#inputServicii')?.value || '',
-        firmaAvantaje: document.querySelector('#inputAvantaje')?.value || '',
-        firmaPreturi: document.querySelector('#inputPreturi')?.value || '',
-        firmaTipClienti: document.querySelector('#inputTipClienti')?.value || '',
-      };
-    });
-
-    console.log('📦 Profil firmă extras din HTML:', data);
-
-    if (!data.firmaNume) {
-      console.warn('⚠️ Nu s-au găsit date valide despre firmă în pagina publică.');
-      await browser.close();
-      return res.status(400).json({ error: 'Date incomplete' });
-    }
-
-    const prompt = `
-Firma: ${data.firmaNume}
-Servicii: ${data.firmaServicii}
-Avantaje: ${data.firmaAvantaje}
-Prețuri: ${data.firmaPreturi}
-Telefon: ${data.firmaTelefon}
-
-Generează un lead relevant pentru această firmă. Leadul trebuie să fie autentic, ca și cum ar fi un client real interesat.
-
-Format răspuns dorit:
-- Nume client
-- Email client
-- Cerere client (ce solicită)
-    `;
-
-    const response = await axios.post(
-      'https://api.openai.com/v1/completions',
+    // Trimitem leadul direct în colecția Wix CMS folosind API REST
+    const wixResponse = await axios.post(
+      'https://www.skywardflow.com/_api/wix-code-namespace/v1/collections/Leaduri/items',
       {
-        model: 'text-davinci-003',
-        prompt,
-        max_tokens: 150,
-        temperature: 0.7,
-        n: 1,
+        data: {
+          numeClient: lead.numeClient,
+          emailClient: lead.emailClient,
+          cerereClient: lead.cerereClient,
+          firmaId: lead.firmaId,
+          dataGenerarii: new Date().toISOString()
+        }
       },
       {
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        },
+          Authorization: 'Bearer TOKENUL_TAU_WIX',
+        }
       }
     );
 
-    const completions = response.data.choices[0].text.trim();
-    console.log('🧠 Răspuns AI complet:', completions);
-
-    const [numeClient, emailClient, cerereClient] = completions.split('\n').map(line => line.replace(/^-\s*/, '').trim());
-
-    const lead = {
-      numeClient,
-      emailClient,
-      cerereClient,
-      firmaId: data.firmaNume,
-      dataGenerarii: new Date().toISOString(),
-    };
-
-    console.log('✅ Lead generat de AI:', lead);
-
-    await axios.post('https://www.skywardflow.com/_functions/receiveLeadFromScraper', lead);
-    console.log('✅ Lead trimis cu succes către Wix');
-
-    await browser.close();
-
-    res.status(200).json({ success: true, lead });
+    console.log('✅ Lead salvat cu succes în Wix CMS:', wixResponse.data);
+    res.status(200).json({ success: true, data: wixResponse.data });
   } catch (error) {
-    console.error('❌ Eroare generală în generare lead:', error.message);
-    res.status(500).json({ error: error.message });
+    console.error('❌ Eroare la salvarea leadului în Wix:', error.response?.data || error.message);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
+const port = 3000;
 app.listen(port, () => {
-  console.log(`✅ Skyward Scraper live on port ${port}`);
+  console.log(`✅ Server Hetzner live pe portul ${port}`);
 });
