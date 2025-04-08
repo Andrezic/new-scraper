@@ -1,16 +1,16 @@
 app = "skyward-scraper"
-kill_signal = "SIGINT"
-kill_timeout = 5
-processes = []
 
 [build]
-  builder = "heroku/buildpacks:20"
+  builder = "Dockerfile"
 
 [env]
-  NODE_ENV = "production"
+  PORT = "8080"
+
+[experimental]
+  auto_rollback = true
 
 [[services]]
-  internal_port = 3000
+  internal_port = 8080
   protocol = "tcp"
 
   [[services.ports]]
