@@ -1,14 +1,6 @@
-const express = require('express');
-const cors = require('cors');
-const bodyParser = require('body-parser');
-const cron = require('node-cron');
 const puppeteer = require('puppeteer');
 const generateLead = require('./utils/openai');
 const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
-
-const app = express();
-app.use(cors());
-app.use(bodyParser.json());
 
 async function extrageDateFirma() {
   console.log("🚀 Lansăm browserul Puppeteer...");
@@ -55,14 +47,14 @@ async function extrageDateFirma() {
   }
 }
 
-cron.schedule('*/5 * * * *', async () => {
-  console.log("⏰ Cronjob activat: generare lead automat");
+(async () => {
+  console.log("⏰ Start generare lead manual din cronjob Render");
 
   const firmaInfo = await extrageDateFirma();
 
   if (!firmaInfo || !firmaInfo.firmaNume || !firmaInfo.firmaServicii) {
     console.warn("⚠️ Date incomplete, oprim procesarea.");
-    return;
+    process.exit(0);
   }
 
   try {
@@ -79,13 +71,10 @@ cron.schedule('*/5 * * * *', async () => {
 
     const data = await wixResponse.json();
     console.log("✅ Lead trimis cu succes către Wix:", data);
+    process.exit(0);
 
   } catch (error) {
     console.error("❌ Eroare în cronjob:", error);
+    process.exit(1);
   }
-});
-
-const port = process.env.PORT || 10000;
-app.listen(port, () => {
-  console.log(`✅ Skyward Scraper live on port ${port}`);
-});
+})();
