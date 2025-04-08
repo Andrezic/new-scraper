@@ -4,6 +4,7 @@
   "description": "Scraper final cu Puppeteer pentru Skyward Flow",
   "main": "index.js",
   "scripts": {
+    "postinstall": "PUPPETEER_SKIP_DOWNLOAD=true npm install",
     "start": "node index.js"
   },
   "dependencies": {
@@ -14,8 +15,5 @@
     "node-cron": "^3.0.2",
     "node-fetch": "^3.3.2",
     "puppeteer": "^21.3.8"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+  }
 }
