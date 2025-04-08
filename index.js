@@ -10,20 +10,24 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-// Funcție pentru extragerea datelor cu Puppeteer
+// Funcție pentru extragerea datelor firmei
 async function extrageDateFirma() {
   console.log("🚀 Lansăm browserul Puppeteer...");
   const browser = await puppeteer.launch({
-    headless: true,
+    headless: "new",
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
   });
   const page = await browser.newPage();
 
   try {
     await page.goto('https://www.skywardflow.com/date-firma', { waitUntil: 'networkidle0' });
-    console.log("✅ Pagina încărcată, extragem datele...");
+    console.log("✅ Pagina încărcată, așteptăm încărcarea completă a datelor...");
 
-    // Extragere date din pagina publică
+    // Așteptăm să se încarce dataset-ul complet
+    await page.waitForSelector('#inputNumeFirma', { visible: true, timeout: 10000 });
+
+    console.log("✅ Dataset încărcat complet, extragem datele...");
+
     const firmaInfo = await page.evaluate(() => {
       const getText = (selector) => {
         const el = document.querySelector(selector);
@@ -43,6 +47,7 @@ async function extrageDateFirma() {
     });
 
     console.log("📦 Profil firmă extras din pagina publică:", firmaInfo);
+
     await browser.close();
     return firmaInfo;
 
@@ -53,7 +58,7 @@ async function extrageDateFirma() {
   }
 }
 
-// Cronjob automat la fiecare 5 minute
+// Cronjob la fiecare 5 minute
 cron.schedule('*/5 * * * *', async () => {
   console.log("⏰ Cronjob activat: generare lead automat");
 
