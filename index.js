@@ -10,7 +10,6 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-// Funcție pentru extragerea datelor firmei
 async function extrageDateFirma() {
   console.log("🚀 Lansăm browserul Puppeteer...");
   const browser = await puppeteer.launch({
@@ -23,26 +22,24 @@ async function extrageDateFirma() {
     await page.goto('https://www.skywardflow.com/date-firma', { waitUntil: 'networkidle0' });
     console.log("✅ Pagina încărcată, așteptăm încărcarea completă a datelor...");
 
-    // Așteptăm să se încarce dataset-ul complet
     await page.waitForSelector('#inputNumeFirma', { visible: true, timeout: 10000 });
-
     console.log("✅ Dataset încărcat complet, extragem datele...");
 
     const firmaInfo = await page.evaluate(() => {
-      const getText = (selector) => {
+      const getValue = (selector) => {
         const el = document.querySelector(selector);
-        return el ? el.textContent.trim() : '';
+        return el ? el.value.trim() : '';
       };
 
       return {
-        firmaNume: getText('#inputNumeFirma'),
-        firmaEmail: getText('#inputEmailFirma'),
-        firmaTelefon: getText('#inputTelefonFirma'),
-        firmaWebsite: getText('#inputWebsiteFirma'),
-        firmaServicii: getText('#inputServicii'),
-        firmaAvantaje: getText('#inputAvantaje'),
-        firmaPreturi: getText('#inputPreturi'),
-        firmaTipClienti: getText('#inputTipClienti'),
+        firmaNume: getValue('#inputNumeFirma'),
+        firmaEmail: getValue('#inputEmailFirma'),
+        firmaTelefon: getValue('#inputTelefonFirma'),
+        firmaWebsite: getValue('#inputWebsiteFirma'),
+        firmaServicii: getValue('#inputServicii'),
+        firmaAvantaje: getValue('#inputAvantaje'),
+        firmaPreturi: getValue('#inputPreturi'),
+        firmaTipClienti: getValue('#inputTipClienti'),
       };
     });
 
@@ -58,7 +55,6 @@ async function extrageDateFirma() {
   }
 }
 
-// Cronjob la fiecare 5 minute
 cron.schedule('*/5 * * * *', async () => {
   console.log("⏰ Cronjob activat: generare lead automat");
 
