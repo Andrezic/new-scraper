@@ -1,33 +1,31 @@
 const express = require('express');
-const bodyParser = require('body-parser');
-const axios = require('axios');
-
 const app = express();
-app.use(bodyParser.json());
+const port = 4000;
 
-// 🔗 URL-ul frontend Wix Studio — pagina publică pe care o ai deja
-const WIX_PUBLIC_URL = 'https://www.skywardflow.com/date-firma'; // Schimbă cu pagina publică a formularului tău
+app.use(express.static('public'));
+app.use(express.json());
 
-app.post('/trimite-lead', async (req, res) => {
-  try {
-    const lead = req.body;
+app.post('/trimite-lead', (req, res) => {
+  const lead = req.body;
 
-    console.log('📥 Lead primit pentru trimitere:', lead);
+  const iframeHtml = `
+    <html>
+      <body>
+        <iframe id="wixFrame" src="https://www.skywardflow.com/date-firma" style="width:0;height:0;border:0; border:none;"></iframe>
+        <script>
+          const data = ${JSON.stringify(lead)};
+          const iframe = document.getElementById('wixFrame');
+          iframe.onload = function() {
+            iframe.contentWindow.postMessage(data, '*');
+          };
+        </script>
+      </body>
+    </html>
+  `;
 
-    const response = await axios.post(WIX_PUBLIC_URL, lead, {
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
-
-    console.log('✅ Lead trimis către Wix frontend:', response.data);
-    res.status(200).json({ success: true, data: response.data });
-  } catch (error) {
-    console.error('❌ Eroare la trimiterea către frontend Wix:', error.response?.data || error.message);
-    res.status(500).json({ success: false, error: error.response?.data || error.message });
-  }
+  res.send(iframeHtml);
 });
 
-app.listen(4000, () => {
-  console.log('🚀 Skyward Proxy server rulează pe portul 4000');
+app.listen(port, () => {
+  console.log(\`🚀 Proxy cu iframe rulează pe portul \${port}\`);
 });
