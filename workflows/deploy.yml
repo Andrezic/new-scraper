@@ -3,26 +3,26 @@ name: Deploy to Hetzner
 on:
   push:
     branches:
-      - master
+      - master  # <- Aici e cheia. Nu main. MASTER!
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
+    - name: Checkout repository
       uses: actions/checkout@v4
 
     - name: Set up SSH
       uses: webfactory/ssh-agent@v0.9.0
       with:
-        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+        ssh-private-key: ${{ secrets.HETZNER_SSH_KEY }}
 
-    - name: Deploy to Hetzner
+    - name: Install dependencies and deploy
       run: |
         ssh -o StrictHostKeyChecking=no root@37.27.94.104 << 'EOF'
           cd /root/new-scraper
           git pull origin master
           npm install
-          pm2 reload skyward-proxy || pm2 start proxy.js --name skyward-proxy
+          pm2 restart skyward-proxy || pm2 start proxy.js --name skyward-proxy
         EOF
