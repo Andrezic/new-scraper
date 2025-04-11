@@ -3,34 +3,26 @@ name: Deploy to Hetzner
 on:
   push:
     branches:
-      - main  # Rulează la orice push pe branch-ul principal
+      - master
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Set up SSH
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.HETZNER_SSH_KEY }}
+    - name: Set up SSH
+      uses: webfactory/ssh-agent@v0.9.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Copy files to Hetzner server
-        run: |
-          rsync -avz --delete ./ root@37.27.94.104:/root/new-scraper/
-
-      - name: Install dependencies on Hetzner
-        run: |
-          ssh -o StrictHostKeyChecking=no root@37.27.94.104 "
-            cd /root/new-scraper &&
-            npm install
-          "
-
-      - name: Restart PM2 process
-        run: |
-          ssh -o StrictHostKeyChecking=no root@37.27.94.104 "
-            pm2 restart skyward-proxy || pm2 start proxy.js --name skyward-proxy
-          "
+    - name: Deploy to Hetzner
+      run: |
+        ssh -o StrictHostKeyChecking=no root@37.27.94.104 << 'EOF'
+          cd /root/new-scraper
+          git pull origin master
+          npm install
+          pm2 reload skyward-proxy || pm2 start proxy.js --name skyward-proxy
+        EOF
